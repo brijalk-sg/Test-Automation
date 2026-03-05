@@ -65,7 +65,16 @@ ${storiesCode}
 
     prompt += `
 ## Instructions
-Generate 5-8 unit test cases. For each test, provide:
+Generate 5-8 unit test cases for the **${analysis.componentName}** component.
+
+CRITICAL RULES:
+- Import the component as: import { ${analysis.componentName} } from './${analysis.componentName}';
+- Every test MUST render <${analysis.componentName} /> with the correct props from the interface above.
+- Use ONLY the props defined in the component analysis. Do NOT invent props that don't exist.
+- Each test must be complete and runnable with Jest + React Testing Library.
+- Include all necessary imports in each test's code block.
+
+For each test, provide:
 1. A clear title
 2. A brief description of what it tests and why
 3. Complete, runnable test code using Jest + React Testing Library
@@ -103,16 +112,24 @@ ${analysis.rawCode}
 \`\`\`
 
 ## Instructions
-Generate 5-8 edge case test scenarios. Think about:
+Generate 5-8 edge case test scenarios for the **${analysis.componentName}** component.
+
+CRITICAL RULES:
+- Import the component as: import { ${analysis.componentName} } from './${analysis.componentName}';
+- Every test MUST render <${analysis.componentName} /> with the correct props from the interface above.
+- Use ONLY the props defined in the component analysis. Do NOT invent props that don't exist.
+- Each test must be complete and runnable with Jest + React Testing Library.
+- Include all necessary imports in each test's code block.
+- Do NOT declare duplicate variable names across tests (use unique names like TestWrapperA, TestWrapperB, etc.).
+
+Think about:
 - Undefined/null/empty values for all props
 - Boundary values (empty strings, very long strings, zero, negative numbers)
 - Rapid user interactions (double-click, fast typing)
 - Missing optional props
-- Invalid prop types
 - Component unmounting during async operations
 - Error states and error boundaries
 - Re-rendering with changed props
-- Ref forwarding edge cases
 
 For each test, provide:
 1. A clear title
@@ -143,13 +160,21 @@ ${analysis.rawCode}
 \`\`\`
 
 ## Instructions
-Generate 5-8 accessibility test cases. Focus on:
+Generate 5-8 accessibility test cases for the **${analysis.componentName}** component.
+
+CRITICAL RULES:
+- Import the component as: import { ${analysis.componentName} } from './${analysis.componentName}';
+- Every test MUST render <${analysis.componentName} /> with the correct props from the interface above.
+- Use ONLY the props defined in the component analysis. Do NOT invent props that don't exist.
+- Each test must be complete and runnable with Jest + React Testing Library.
+- Include all necessary imports in each test's code block.
+- Do NOT declare duplicate variable names across tests.
+
+Focus on:
 - Proper ARIA roles and attributes
 - Keyboard navigation (Tab, Enter, Escape, Arrow keys)
 - Focus management and focus trapping
 - Screen reader compatibility (aria-label, aria-describedby, aria-live)
-- Color contrast and visual indicators
-- Form labels and error messages
 - Semantic HTML usage
 - Touch target sizes
 - Reduced motion preferences

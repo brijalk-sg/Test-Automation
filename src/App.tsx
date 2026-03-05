@@ -84,9 +84,21 @@ function App() {
 
     const handleGenerate = async () => {
         if (!code.trim()) {
-            setError('Please paste your component code first.');
+            setError(storiesCode
+                ? 'You uploaded a Storybook story file. Please also paste or upload the actual component code (.tsx) — stories alone are not enough.'
+                : 'Please paste your component code first.');
             return;
         }
+
+        // Detect if user pasted a stories file as component code
+        const isStories = /export\s+default\s+\{[\s\S]*?title\s*:/m.test(code) ||
+            /const\s+meta\s*[:=].*satisfies\s+Meta/m.test(code) ||
+            /\.stories\./i.test(code);
+        if (isStories && !storiesCode) {
+            setError('This looks like a Storybook stories file, not a component file. Please paste the actual component code (e.g., Button.tsx, not Button.stories.tsx).');
+            return;
+        }
+
         if (!apiKey.trim()) {
             setError('Please enter your Claude API key.');
             return;

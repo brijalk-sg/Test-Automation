@@ -110,8 +110,8 @@ function extractStateVariables(code: string) {
 
 function extractEventHandlers(code: string) {
     const handlers: string[] = [];
-    // Match onClick, onSubmit, onChange, etc.
-    const handlerRegex = /on(\w+)\s*[=:]/g;
+    // Match onClick, onSubmit, onChange, etc. (on + uppercase letter at word boundary)
+    const handlerRegex = /\bon([A-Z]\w*)\s*[=:]/g;
     let match;
     const seen = new Set<string>();
 

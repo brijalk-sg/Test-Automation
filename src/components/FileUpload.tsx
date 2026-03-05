@@ -72,8 +72,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileLoaded }) => {
                     <span className="file-name">{fileName}</span>
                 ) : (
                     <>
-                        <span className="upload-text">Drop a file here or click to browse</span>
-                        <span className="upload-hint">.tsx, .jsx, .ts, .js</span>
+                        <span className="upload-text">Drop component or stories file here</span>
+                        <span className="upload-hint">Component (.tsx) loads into editor &bull; Stories (.stories.tsx) adds extra context</span>
                     </>
                 )}
             </label>
