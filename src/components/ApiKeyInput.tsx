@@ -14,7 +14,7 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({
     return (
         <div className="api-key-input">
             <label className="api-key-label" htmlFor="api-key">
-                <span className="key-icon">🔑</span> OpenAI API Key
+                <span className="key-icon">🔑</span> Claude API Key
             </label>
             <div className="api-key-field">
                 <input
@@ -22,7 +22,7 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({
                     type={visible ? 'text' : 'password'}
                     value={apiKey}
                     onChange={(e) => onApiKeyChange(e.target.value)}
-                    placeholder="sk-..."
+                    placeholder="sk-ant-..."
                     className="api-key-text-input"
                     autoComplete="off"
                 />
