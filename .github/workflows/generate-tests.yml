@@ -45,7 +45,7 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "Test Gen Bot"
-          git add **/*.test.tsx **/*.test.jsx || true
+          find . -name "*.test.tsx" -o -name "*.test.jsx" | grep -v node_modules | xargs -r git add
           git diff --staged --quiet || {
             git commit -m "chore: auto-generate test cases [skip ci]"
             git push
