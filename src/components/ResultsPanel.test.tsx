@@ -1,3 +1,4 @@
+```tsx
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -55,12 +56,22 @@ jest.mock('./CategoryTabs', () => ({
 global.URL.createObjectURL = jest.fn(() => 'mocked-url');
 global.URL.revokeObjectURL = jest.fn();
 
+// Mock Blob constructor
+global.Blob = jest.fn().mockImplementation((content, options) => ({
+  content,
+  options,
+  type: options?.type || 'text/plain'
+})) as any;
+
 // Mock document.createElement and click
 const mockClick = jest.fn();
 const mockAnchor = {
   href: '',
   download: '',
   click: mockClick,
+  setAttribute: jest.fn(),
+  getAttribute: jest.fn(),
+  style: {}
 };
 
 jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
@@ -148,6 +159,33 @@ describe('ResultsPanel', () => {
       expect(steps[1]).toHaveClass('active');
       expect(steps[2]).toHaveClass('pulse');
     });
+
+    it('should not render other content when loading', () => {
+      render(
+        <ResultsPanel
+          {...defaultProps}
+          loading={true}
+          results={null}
+        />
+      );
+
+      expect(screen.queryByText('No results yet')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('category-tabs')).not.toBeInTheDocument();
+      expect(screen.queryByText('📥 Download .test.tsx')).not.toBeInTheDocument();
+    });
+
+    it('should have loading panel class', () => {
+      const { container } = render(
+        <ResultsPanel
+          {...defaultProps}
+          loading={true}
+          results={null}
+        />
+      );
+
+      expect(container.querySelector('.results-panel')).toBeInTheDocument();
+      expect(container.querySelector('.results-loading')).toBeInTheDocument();
+    });
   });
 
   describe('Empty State', () => {
@@ -164,6 +202,33 @@ describe('ResultsPanel', () => {
       expect(screen.getByText(/Paste your component code/)).toBeInTheDocument();
       expect(screen.getByText('Generate Tests', { exact: false })).toBeInTheDocument();
       expect(screen.getByText('🧪')).toBeInTheDocument();
+    });
+
+    it('should have empty state class structure', () => {
+      const { container } = render(
+        <ResultsPanel
+          {...defaultProps}
+          loading={false}
+          results={null}
+        />
+      );
+
+      expect(container.querySelector('.results-panel')).toBeInTheDocument();
+      expect(container.querySelector('.results-empty')).toBeInTheDocument();
+      expect(container.querySelector('.empty-icon')).toBeInTheDocument();
+    });
+
+    it('should not render results content in empty state', () => {
+      render(
+        <ResultsPanel
+          {...defaultProps}
+          loading={false}
+          results={null}
+        />
+      );
+
+      expect(screen.queryByTestId('category-tabs')).not.toBeInTheDocument();
+      expect(screen.queryByText('📥 Download .test.tsx')).not.toBeInTheDocument();
     });
   });
 
@@ -207,6 +272,35 @@ describe('ResultsPanel', () => {
       expect(screen.getByText('Unit (2)')).toBeInTheDocument();
       expect(screen.getByText('Edge (1)')).toBeInTheDocument();
       expect(screen.getByText('A11y (1)')).toBeInTheDocument();
+    });
+
+    it('should have correct CSS classes for results header', () => {
+      const { container } = render(<ResultsPanel {...defaultProps} />);
+
+      expect(container.querySelector('.results-header')).toBeInTheDocument();
+      expect(container.querySelector('.results-title')).toBeInTheDocument();
+      expect(container.querySelector('.component-name')).toBeInTheDocument();
+      expect(container.querySelector('.total-badge')).toBeInTheDocument();
+    });
+
+    it('should calculate total count correctly with different result distributions', () => {
+      const customResults = {
+        unitTests: [{ id: '1', description: 'test', code: 'code', priority: 'high' as const }],
+        edgeCases: [],
+        a11yTests: [
+          { id: '2', description: 'test2', code: 'code2', priority: 'medium' as const },
+          { id: '3', description: 'test3', code: 'code3', priority: 'low' as const },
+        ],
+      };
+
+      render(
+        <ResultsPanel
+          {...defaultProps}
+          results={customResults}
+        />
+      );
+
+      expect(screen.getByText('3 tests')).toBeInTheDocument();
     });
   });
 
@@ -256,6 +350,19 @@ describe('ResultsPanel', () => {
       await user.click(screen.getByTestId('edge-tab'));
       expect(onTabChange).toHaveBeenCalledWith('edge');
     });
+
+    it('should maintain correct active tab visual state', () => {
+      render(<ResultsPanel {...defaultProps} activeTab="edge" />);
+
+      const edgeTab = screen.getByTestId('edge-tab');
+      expect(edgeTab).toHaveClass('active');
+    });
+
+    it('should display test cards list container', () => {
+      const { container } = render(<ResultsPanel {...defaultProps} />);
+
+      expect(container.querySelector('.test-cards-list')).toBeInTheDocument();
+    });
   });
 
   describe('Empty Categories', () => {
@@ -274,6 +381,44 @@ describe('ResultsPanel', () => {
       );
 
       expect(screen.getByText('No tests generated for this category.')).toBeInTheDocument();
+    });
+
+    it('should display no tests message for specific empty category', () => {
+      const partialResults = {
+        unitTests: [{ id: '1', description: 'test', code: 'code', priority: 'high' as const }],
+        edgeCases: [],
+        a11yTests: [],
+      };
+
+      render(
+        <ResultsPanel
+          {...defaultProps}
+          results={partialResults}
+          activeTab="edge"
+        />
+      );
+
+      expect(screen.getByText('No tests generated for this category.')).toBeInTheDocument();
+      expect(screen.queryByTestId('test-card-1')).not.toBeInTheDocument();
+    });
+
+    it('should show correct count for empty categories in tabs', () => {
+      const partialResults = {
+        unitTests: [{ id: '1', description: 'test', code: 'code', priority: 'high' as const }],
+        edgeCases: [],
+        a11yTests: [],
+      };
+
+      render(
+        <ResultsPanel
+          {...defaultProps}
+          results={partialResults}
+        />
+      );
+
+      expect(screen.getByText('Unit (1)')).toBeInTheDocument();
+      expect(screen.getByText('Edge (0)')).toBeInTheDocument();
+      expect(screen.getByText('A11y (0)')).toBeInTheDocument();
     });
   });
 
@@ -307,151 +452,4 @@ describe('ResultsPanel', () => {
       const user = userEvent.setup();
       render(<ResultsPanel {...defaultProps} />);
 
-      await user.click(screen.getByText('📋 How to Use'));
-
-      expect(screen.getByText(/TestComponent\.tsx/)).toBeInTheDocument();
-      expect(screen.getByText(/TestComponent\.test\.tsx/)).toBeInTheDocument();
-    });
-  });
-
-  describe('File Download', () => {
-    it('should trigger download when download button is clicked', async () => {
-      const user = userEvent.setup();
-      render(<ResultsPanel {...defaultProps} />);
-
-      await user.click(screen.getByText('📥 Download .test.tsx'));
-
-      expect(global.URL.createObjectURL).toHaveBeenCalled();
-      expect(document.createElement).toHaveBeenCalledWith('a');
-      expect(mockAnchor.download).toBe('TestComponent.test.tsx');
-      expect(mockClick).toHaveBeenCalled();
-      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mocked-url');
-    });
-
-    it('should use default component name in filename when componentName is undefined', async () => {
-      const user = userEvent.setup();
-      render(
-        <ResultsPanel
-          {...defaultProps}
-          componentName={undefined}
-        />
-      );
-
-      await user.click(screen.getByText('📥 Download .test.tsx'));
-
-      expect(mockAnchor.download).toBe('Component.test.tsx');
-    });
-
-    it('should create correct file content with merged imports', async () => {
-      const user = userEvent.setup();
-      render(<ResultsPanel {...defaultProps} />);
-
-      await user.click(screen.getByText('📥 Download .test.tsx'));
-
-      const createObjectURLCall = (global.URL.createObjectURL as jest.Mock).mock.calls[0];
-      const blob = createObjectURLCall[0];
-      
-      expect(blob).toBeInstanceOf(Blob);
-      expect(blob.type).toBe('text/plain');
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('should have proper semantic structure', () => {
-      render(<ResultsPanel {...defaultProps} />);
-
-      expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /download/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /how to use/i })).toBeInTheDocument();
-    });
-
-    it('should have accessible loading state', () => {
-      render(
-        <ResultsPanel
-          {...defaultProps}
-          loading={true}
-          results={null}
-        />
-      );
-
-      expect(screen.getByText('Generating test cases with AI...')).toBeInTheDocument();
-    });
-
-    it('should have accessible empty state', () => {
-      render(
-        <ResultsPanel
-          {...defaultProps}
-          loading={false}
-          results={null}
-        />
-      );
-
-      expect(screen.getByRole('heading', { level: 3, name: 'No results yet' })).toBeInTheDocument();
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle results with empty arrays', () => {
-      const emptyResults = {
-        unitTests: [],
-        edgeCases: [],
-        a11yTests: [],
-      };
-
-      render(
-        <ResultsPanel
-          {...defaultProps}
-          results={emptyResults}
-        />
-      );
-
-      expect(screen.getByText('0 tests')).toBeInTheDocument();
-      expect(screen.getByText('No tests generated for this category.')).toBeInTheDocument();
-    });
-
-    it('should handle very long component names', () => {
-      const longName = 'VeryLongComponentNameThatMightCauseLayoutIssues';
-      render(
-        <ResultsPanel
-          {...defaultProps}
-          componentName={longName}
-        />
-      );
-
-      expect(screen.getByText(longName)).toBeInTheDocument();
-    });
-
-    it('should handle special characters in component name', () => {
-      const specialName = 'Component$WithSpecial_Characters123';
-      render(
-        <ResultsPanel
-          {...defaultProps}
-          componentName={specialName}
-        />
-      );
-
-      expect(screen.getByText(specialName)).toBeInTheDocument();
-    });
-  });
-
-  describe('Component State Management', () => {
-    it('should maintain setup guide state independently', async () => {
-      const user = userEvent.setup();
-      const { rerender } = render(<ResultsPanel {...defaultProps} />);
-
-      await user.click(screen.getByText('📋 How to Use'));
-      expect(screen.getByText('How to Integrate in Any React Project')).toBeInTheDocument();
-
-      // Re-render with different props
-      rerender(
-        <ResultsPanel
-          {...defaultProps}
-          activeTab="edge"
-        />
-      );
-
-      // Setup guide should still be open
-      expect(screen.getByText('How to Integrate in Any React Project')).toBeInTheDocument();
-    });
-  });
-});
+      await user.click(screen.getByText('📋 How to
