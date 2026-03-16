@@ -35,7 +35,7 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({
                     {visible ? '🙈' : '👁️'}
                 </button>
             </div>
-            <p className="api-key-hint">Your key stays in your browser — never sent to our servers.</p>
+            {/* <p className="api-key-hint">Your key stays in your browser — never sent to our servers.</p> */}
         </div>
     );
 };
