@@ -7,7 +7,7 @@ export const Header: React.FC = () => {
                 <div className="header-left">
                     <div className="logo">
                         <span className="logo-icon">⚡</span>
-                        <h1 className="logo-text">TestGen AI</h1>
+                        <h1 className="logo-text">Test Gen AI</h1>
                     </div>
                     <p className="header-tagline">
                         AI-powered test case generator for React components
