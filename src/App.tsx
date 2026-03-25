@@ -10,7 +10,7 @@ import {
     buildEdgeCasePrompt,
     buildA11yPrompt,
 } from './lib/promptBuilder';
-import { generateTests } from './lib/claude';
+import { generateTests } from './lib/gemini';
 import type { TestSuggestion, TestCategory } from './types';
 
 const SAMPLE_CODE = `import React, { useState } from 'react';
@@ -59,7 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
 function App() {
     const [code, setCode] = useState('');
     const [storiesCode, setStoriesCode] = useState('');
-    const [apiKey, setApiKey] = useState(import.meta.env.VITE_CLAUDE_API_KEY || '');
+    const [apiKey, setApiKey] = useState(import.meta.env.VITE_GEMINI_API_KEY || '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TestCategory>('unit');
@@ -100,7 +100,7 @@ function App() {
         }
 
         if (!apiKey.trim()) {
-            setError('Please enter your Claude API key.');
+            setError('Please enter your Gemini API key.');
             return;
         }
 

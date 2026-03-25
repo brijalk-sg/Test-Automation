@@ -6,8 +6,8 @@ import { execSync } from "child_process";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import path from "path";
 
-const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const BASE_SHA = process.env.BASE_SHA;
 const HEAD_SHA = process.env.HEAD_SHA;
 
@@ -42,14 +42,13 @@ function buildPrompt(componentCode, existingTest, filePath) {
 ${componentCode}
 \`\`\`
 
-${
-  hasExistingTest
-    ? `## Existing Test File (update/extend this):
+${hasExistingTest
+      ? `## Existing Test File (update/extend this):
 \`\`\`tsx
 ${existingTest}
 \`\`\``
-    : "## No existing test file — create one from scratch."
-}
+      : "## No existing test file — create one from scratch."
+    }
 
 ## Requirements:
 - Use @testing-library/react with Jest
@@ -66,31 +65,30 @@ Return ONLY the complete test file code, no explanations.`;
 
 // --- Step 3: Call Claude API ---
 
-async function callClaude(prompt) {
-  const res = await fetch(CLAUDE_API_URL, {
+async function callGemini(prompt) {
+  const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": CLAUDE_API_KEY,
-      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 4096,
+      },
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Claude API error ${res.status}: ${err}`);
+    throw new Error(`Gemini API error ${res.status}: ${err}`);
   }
 
   const data = await res.json();
-  return data.content
-    .filter((b) => b.type === "text")
-    .map((b) => b.text)
-    .join("\n");
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
 // --- Step 4: Extract code from response ---
@@ -156,9 +154,9 @@ async function postPRComment(results) {
 // --- Main ---
 
 async function main() {
-  if (!CLAUDE_API_KEY) {
+  if (!GEMINI_API_KEY) {
     console.error(
-      "CLAUDE_API_KEY not set. Add it in GitHub → Settings → Secrets.",
+      "GEMINI_API_KEY not set. Add it in GitHub → Settings → Secrets.",
     );
     process.exit(1);
   }
@@ -190,7 +188,7 @@ async function main() {
       mkdirSync(path.dirname(testPath), { recursive: true });
 
       const prompt = buildPrompt(componentCode, existingTest, filePath);
-      const response = await callClaude(prompt);
+      const response = await callGemini(prompt);
       const testCode = extractCode(response);
 
       writeFileSync(testPath, testCode, "utf-8");
