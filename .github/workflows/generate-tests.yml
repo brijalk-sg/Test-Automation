@@ -1,32 +1,52 @@
-# Add this stage to your existing .gitlab-ci.yml
+name: AI Test Generator
 
-stages:
-  - test-gen    # Add before your test stage
-  - test
-  # ... your other stages
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '**/*.tsx'
+      - '**/*.jsx'
 
-generate-tests:
-  stage: test-gen
-  image: node:20
-  rules:
-    # Only run on merge requests
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  variables:
-    # CLAUDE_API_KEY and GITLAB_TOKEN should be set in
-    # GitLab → Settings → CI/CD → Variables (masked + protected)
-    GIT_STRATEGY: clone
-    GIT_DEPTH: 0  # Full clone needed for diff
-  script:
-    - npm install  # Or use a cached image with deps
-    - node scripts/generate-tests.mjs
-    # Auto-commit generated test files back to the MR branch
-    - |
-      git config user.email "ci-bot@yourcompany.com"
-      git config user.name "Test Gen Bot"
-      git add "**/*.test.tsx" "**/*.test.jsx"
-      # Only commit if there are changes
-      git diff --staged --quiet || {
-        git commit -m "chore: auto-generate test cases [skip ci]"
-        git push "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" HEAD:${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}
-      }
-  allow_failure: true  # Don't block MR if generation fails
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate tests
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: node scripts/generate-tests.mjs
+
+      - name: Commit generated tests
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "Test Gen Bot"
+          find . -name "*.test.tsx" -o -name "*.test.jsx" | grep -v node_modules | xargs -r git add
+          git diff --staged --quiet || {
+            git commit -m "chore: auto-generate test cases [skip ci]"
+            git push
+          }
